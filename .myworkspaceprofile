@@ -1,0 +1,347 @@
+#!/bin/bash
+#--------------------------------------~/.bashrc.conf----------------------------------------
+#------------------------------------------alias---------------------------------------------
+my_hostname=${USER}
+work_dir="/home/$my_hostname/qnap/working/qnap/zfs"
+alias hom="cd /home/"
+alias desk="cd /home/$my_hostname/Desktop/"
+alias doc="cd /home/$my_hostname/Documents/"
+alias cdd="cd /home/$my_hostname"
+alias cdmy="cd /home/$my_hostname/myworkspace"
+alias cdworking="cd $work_dir"
+alias cdzol="cd $work_dir/../../ZFSOnLinux"
+alias mgrep="grep -rn"
+alias mfind="find . -name"
+alias mk='make &> log.txt'
+alias mc='make clean'
+alias rdf='readlink -f'
+alias mtail_syslog='tail -f /var/log/syslog'
+alias gotolinux="ssh `arp -n | awk 'NR==2{print $1}'`"
+alias gotobsd='ssh 192.168.102.27'
+
+function mkdircd () { 
+	mkdir -p "$@" && eval cd "\"\$$#\"";
+}
+
+function cxx_help(){
+	printf "cxx <filename.cxx>\n"
+}
+
+function cxx(){
+	if [ "$#" != "1" ];then
+		cxx_help
+		return
+	fi
+	FILENAME=$1
+	if [ -f "${FILENAME}" ];then
+		vim ${FILENAME}
+		return
+	fi
+	CFILE='#include <stdio.h>\n#include <stdlib.h>\nint main(int argc, char *argv[]){\n\n\t//return from main\n\treturn (0);\n}'
+	CPPFILE='#include <iostream>\nusing namespace std;\nint main(int argc, char *argv[]){\n\n\t//return from main\n\treturn (0);\n}'
+	#printf "filename: ${FILENAME}\n"
+	EXT=`echo ${FILENAME} | grep -o '.c$\|.cpp$\|.h$'`
+	#printf "ext: ${EXT}\n"
+	if [ "${EXT}" == ".cpp" ];then
+		echo -e ${CPPFILE} > ${FILENAME}
+		vim ${FILENAME}
+	elif [ "${EXT}" == ".c" ];then
+		echo -e ${CFILE} > ${FILENAME}
+		vim ${FILENAME}
+	elif [ "${EXT}" == ".h" ];then
+		FILENAME_WITHOUT_EXT=`basename ${FILENAME} '.h'`
+		VAR=`echo ${FILENAME_WITHOUT_EXT} | tr 'a-z' 'A-Z'`
+		HEADERFILE="#ifndef ${VAR}_H\n#define ${VAR}_H\n\n#endif"	
+		echo -e ${HEADERFILE} > ${FILENAME}
+		vim ${FILENAME}
+	else
+		cxx_help
+		return
+	fi	
+}
+
+function dom(){
+	AUTO_TEXT="############################################### Auto  Generated ###########################################"
+	SG_MK_VARIABLE_LIST='############################# SOURCE_FILES+=  HEADER_FILES+= LIBS+= INCLUDES+= ##########################'
+	SG_MK='sg.mk'
+	MAKEFILE='Makefile'
+	CXXFILES=`find  -maxdepth 1 -regex ".*\.\(c\|cpp\)"`
+	HEADERFILES=`find  . -maxdepth 1 -type f -name '*.h'`
+	REDIRECT='echo -e include /home/aeon26/myworkspace/development_automation/make/redirect.mk'
+	echo ${AUTO_TEXT} > ${SG_MK}
+	echo ${SG_MK_VARIABLE_LIST} >> ${SG_MK}
+	echo ${AUTO_TEXT} > ${MAKEFILE}
+	if [ "${CXXFILES}" ] ;then
+		CXXFILES="SOURCE_FILES = ${CXXFILES}"
+		echo ${CXXFILES} >> ${SG_MK}
+	fi
+	if [ "${HEADERFILES}" ];then
+		HEADERFILES="HEADER_FILES = ${HEADERFILES}"
+		echo ${HEADERFILES} >> ${SG_MK}
+	fi
+	${REDIRECT} >> ${MAKEFILE}	 
+}
+
+MAKEFILE_DATA="########################## sg.mk contains \${SOURCE_FILES}  \${HEADER_FILES} \${LIBS} \${INCLUDES}	 ############################\n\
+PWD=\$(shell pwd)\n\
+SG.MK=\${PWD}/sg.mk\n\
+include \${SG.MK}\n\
+EXT=\$(shell echo \${SOURCE_FILES} | grep -o \".cpp\")\
+\nCXX=gcc\n\
+EXE=\$(shell basename \${PWD})\n\
+RM=rm\n\
+OBJS+=\"\"\n\
+CFLAGS=\${PKG}\n\
+ifneq \"\${EXT}\" \"\"\n\
+\tOBJS=\$(patsubst %.cpp, %.o, \${SOURCE_FILES})\n\
+\tCXX=g++\n\
+else\n\
+\tEXT=.c\n\
+\tCXX=gcc\n\
+\tOBJS=\$(patsubst %.c, %.o, \${SOURCE_FILES})\n\
+endif\n\
+EXTPAT=%\"\${EXT}\"\n\
+FIRST_SOURCE_FILE=\$(firstword \${SOURCE_FILES})\n\
+#EXE=\$(basename \${FIRST_SOURCE_FILE} \${EXT})\n\
+all:\${EXE}\n\
+\${EXE}:\${OBJS} \${HEADER_FILES}\n\
+\t\${CXX} -o \$@ \$^ \${LIBS} \${INCLUDES} \${PKG}\n\
+#%.o:\${EXTPAT}\n\
+#\t\${CXX} -c -w \${SOURCE_FILES} -o \$@ \${LIBS} \${INCLUDES}\n\
+.PHONY: clean run\n\
+\n\
+run:\n\
+\t@./\${EXE}\n\
+clean:\n\
+\t\${RM} -rf \${EXE} \${OBJS} \n\
+"
+
+function sgmk(){
+	AUTO_TEXT="############################################### Auto  Generated ###########################################"
+	SG_MK_VARIABLE_LIST='############################# SOURCE_FILES+=  HEADER_FILES+= LIBS+= INCLUDES+=  PKGS+= ##########################'
+	#PWD=`pwd`
+	#SG_MK=`basename ${PWD}`'.mk'
+	SG_MK='sg.mk'
+	if [ "$1" ];then
+		DIR=$1
+	else
+		printf "help:\nsgmk <dir>\n"
+		return
+		DIR="./"
+	fi
+	CXXFILES=`find  ${DIR} -regex ".*\.\(c\|cpp\)"`
+	HEADERFILES=`find  ${DIR} -type f -name '*.h'`
+	echo ${AUTO_TEXT} > ${SG_MK}
+
+	echo ${SG_MK_VARIABLE_LIST} >> ${SG_MK}
+	if [ "${CXXFILES}" ] ;then
+		CXXFILES="SOURCE_FILES = ${CXXFILES}"
+		echo ${CXXFILES} >> ${SG_MK}
+	fi
+	if [ "${HEADERFILES}" ];then
+		HEADERFILES="HEADER_FILES = ${HEADERFILES}"
+		echo ${HEADERFILES} >> ${SG_MK}
+	fi
+	#can also add LIBS and INCLUDES
+}
+
+function mxx(){
+	#REDIRECT='echo -e include /home/aeon26/myworkspace/development_automation/make/redirect.mk'
+	AUTO_TEXT="############################################### Auto  Generated ###########################################"
+	MAKEFILE='Makefile'
+	if [ "$1" ];then
+		DIR=$1
+	else
+		DIR="./"
+		printf "help:\nmxx <dir>\n"
+		return
+	fi
+	sgmk "${DIR}"
+	echo ${AUTO_TEXT} > ${MAKEFILE}
+	#${REDIRECT} >> ${MAKEFILE}	 
+	echo  -e ${MAKEFILE_DATA} >> "Makefile"
+}
+
+KMAKEFILE_DATA="#================Auto Generated======================\n\
+MODNAME=\$(shell basename \$(PWD))\n\
+SOURCE_FILES:=\$(shell find \$(PWD) -name '*.c' -exec basename {} \; | grep -v '\.mod')\n\
+OBJ_FILES:=\$(patsubst %.c, %.o, \$(SOURCE_FILES))\n\
+obj-m += \${MODNAME}.o\n\
+\${MODNAME}-objs := \${OBJ_FILES}\n\
+all:\n\
+\tmake -C /lib/modules/\$(shell uname -r)/build M=\$(PWD) modules\n\
+clean:\n\
+\tmake -C /lib/modules/\$(shell uname -r)/build M=\$(PWD) clean\n\
+load:\n\
+\tsudo insmod *.ko\n\
+unload:\n\
+\tsudo rmmod \${MODNAME}\n\
+"
+function kmxx(){
+        echo -e ${KMAKEFILE_DATA} > Makefile
+
+}
+
+function bxx_help(){
+	printf "bxx <dir>\n"
+}		
+function bxx(){
+	if [ "$#" -eq "0" ];then
+		bxx_help
+		return
+	fi
+	NOW=$(date +"%d%b%Y_%I.%M.%S")
+	BK_DIR="/home/${HOSTNAME}/backup"
+	if [ ! -d ${BK_DIR} ] ; then
+		printf "${BK_DIR} dir not found"
+		mkdir -p ${BK_DIR}
+	fi
+	for dir in $@
+	do
+		dirpath=${dir}
+		if [ ! -d ${dirpath} ] && [ ! -f ${dirpath} ]; then
+			printf "input ${dir} directory/file not exits !!!\n"
+			continue;
+		fi
+		BASE_DIR=`basename ${dirpath}`
+		DIR=`readlink -f  ${dirpath}`
+		PWD_DIR=`dirname  -z ${DIR} ${BASE_DIR} `
+		PWD_DIR=`echo ${PWD_DIR} | sed 's/.$//g' `
+		#printf "pwd: ${PWD_DIR}\n"
+		#return
+		PWD_DIR=${BK_DIR}/`echo ${PWD_DIR} | sed 's/\///g'`
+		
+		if [ ! -d "${PWD_DIR}" ] ;then
+			printf "${PWD_DIR} dir not found\n"
+			mkdir -p ${PWD_DIR}
+		fi
+		dir=`basename ${dir}`
+		NOW_DIR="${dir}_${NOW}"
+		CMD="${dirpath} ${PWD_DIR}/${NOW_DIR}"
+		printf "cp -r $CMD\n"
+		cp -r  ${CMD}
+		printf "backup copy created at ${PWD_DIR}/${NOW_DIR}\n"
+	done
+}
+
+remove_kernel(){
+	set -x
+	KERNEL_VERSION=$1
+	EXE='sudo rm -rf' 
+	${EXE} /boot/vmlinuz*${KERNEL_VERSION}*
+	${EXE} /boot/initrd*${KERNEL_VERSION}*
+	${EXE} /boot/config-*${KERNEL_VERSION}*
+	${EXE} /lib/modules/*${KERNEL_VERSION}*/
+	sudo update-grub2
+	set +x
+}
+
+function install_genmake(){
+	git clone https://github.com/srinu47/genmake /tmp/genmake
+	cd /tmp/genmake
+	sudo apt install devscripts 
+	sudo apt-get install -y build-essential autoconf libtool libssl-dev gawk debhelper dh-systemd init-system-helpers pkg-config
+	sudo ./create-deb-pkg.sh
+	sudo dpkg -i *.deb
+	cd -
+	rm -rf /tmp/genmake
+}
+
+clean_qnap() {
+    cdworking
+    if [ ! `basename $(pwd)` = 'qnap' ];then
+		echo 'Not inside qnap dir'
+		echo "Usage: Clean all unwanted stuff from qnap dir."
+		return
+    fi    	
+
+    #clean lpl dir
+    #cd zfs/sys/cddl/compat/lpl; make clean; cd -
+    #clean linux_dependencies
+    cd linux_dependencies ; make clean; cd -
+   
+    #clean cddl
+    cd zfs/cddl; make clean ; cd -
+    
+    #clean zfs-module
+    cd zfs/zfs-module; make clean ; cd -
+
+    #clean all makefiles
+    for f in `find ./zfs -name Makefile.generic`
+    do
+	makefile=`dirname $f`/Makefile
+	rm -f $makefile
+	echo removed $makefile
+    done	
+
+    #clean unwanted .o and .cmd
+    for f in `find ./zfs  \( -name '*.o' -or -name '*.cmd' -or -name tags -or -name cscope.out \)`
+    do
+	echo removed $f
+	rm -f $f
+    done
+}
+setup_qnap(){
+    if [ ! `basename $(pwd)` = 'qnap' ];then
+		echo 'Not inside qnap dir'
+		echo "Usage: Setup the qnap stuff."
+		return
+    fi    	
+    #build lpl dir
+    #cd zfs/sys/cddl/compat/lpl; make ; cd -
+    #build linux_dependencies
+    cd linux_dependencies ; make ; cd -
+    	
+}
+#---------------------------------------------------
+	
+		#QNAP#	
+
+#---------------------------------------------------
+dev_name="/home/msys/devdir/d128M"
+zpool_name="qnappool"
+alias qnapclone="git clone git@192.168.102.80:root/qnap.git"
+alias qnap_zpool="sudo ${work_dir}/cddl/sbin/zpool/zpool"
+alias qnap_zfs="sudo ${work_dir}/cddl/sbin/zfs/zfs"
+alias qnap_zfilecopy="sudo ${work_dir}/cddl/usr.bin/zfilecopy/zfilecopy"
+alias zpool='sudo zpool'
+alias zfs='sudo zfs'
+mcreate_dev () {
+    	if [ ! -z "$dev_name" ];then
+		sudo rm -f ${dev_name} && sudo dd if=/dev/zero of=${dev_name} bs=1M count=128
+    	else
+	    echo "usage: mcreate_dev <devpath>"
+	fi
+}
+create_zpool(){
+    	#mcreate_dev
+	if [ -f $dev_name ];then
+		qnap_zpool create $zpool_name ${dev_name}
+    	fi
+}
+list_zpool(){
+	qnap_zpool list
+}
+list_zfs(){
+	qnap_zfs list
+}
+status_zpool(){
+	qnap_zpool status
+}
+destroy_zpool(){
+	qnap_zpool destroy $zpool_name
+}
+load_zfs_module(){
+    cdworking
+    if [ ! `basename $(pwd)` = 'qnap' ];then
+		echo 'Not inside qnap dir'
+		echo "Usage: Setup the qnap stuff."
+		return
+    fi    	
+sudo insmod linux_dependencies/opencrypto/ocf.ko && sudo insmod linux_dependencies/opencrypto/cryptosoft.ko && sudo insmod zfs/sys/cddl/compat/lpl/lpl.ko && sudo insmod zfs/zfs-module/zfs.ko
+
+	cd -
+}
+unload_zfs_module(){
+	sudo rmmod zfs  && sudo rmmod cryptosoft && sudo rmmod ocf && sudo rmmod lpl 
+}

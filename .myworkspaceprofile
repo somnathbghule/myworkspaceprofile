@@ -9,15 +9,12 @@ alias doc="cd /home/$my_hostname/Documents/"
 alias cdd="cd /home/$my_hostname"
 alias cdmy="cd /home/$my_hostname/myworkspace"
 alias cdworking="cd $work_dir"
-alias cdzol="cd $work_dir/../../ZFSOnLinux"
 alias mgrep="grep -rn"
 alias mfind="find . -name"
 alias mk='make &> log.txt'
 alias mc='make clean'
 alias rdf='readlink -f'
 alias mtail_syslog='tail -f /var/log/syslog'
-alias gotolinux="ssh `arp -n | awk 'NR==2{print $1}'`"
-alias gotobsd='ssh 192.168.102.27'
 
 function mkdircd () { 
 	mkdir -p "$@" && eval cd "\"\$$#\"";
@@ -247,6 +244,63 @@ function install_genmake(){
 	rm -rf /tmp/genmake
 }
 
+#---------------------------------------------------	
+		#QNAP#	
+#---------------------------------------------------
+if [ 0 ];then
+	dev_name="/home/msys/devdir/d128M"
+	zpool_name="qnappool"
+	alias qnapclone="git clone git@192.168.102.80:root/qnap.git"
+	alias qnap_zpool="sudo ${work_dir}/cddl/sbin/zpool/zpool"
+	alias qnap_zfs="sudo ${work_dir}/cddl/sbin/zfs/zfs"
+	alias qnap_zfilecopy="sudo ${work_dir}/cddl/usr.bin/zfilecopy/zfilecopy"
+	alias zpool='sudo zpool'
+	alias zfs='sudo zfs'
+	alias gotolinux="ssh `arp -n | awk 'NR==2{print $1}'`"
+	alias gotobsd='ssh 192.168.102.27'
+	alias cdzol="cd $work_dir/../../ZFSOnLinux"
+fi
+
+mcreate_dev () {
+    	if [ ! -z "$dev_name" ];then
+		sudo rm -f ${dev_name} && sudo dd if=/dev/zero of=${dev_name} bs=1M count=128
+    	else
+	    echo "usage: mcreate_dev <devpath>"
+	fi
+}
+create_zpool(){
+    	#mcreate_dev
+	if [ -f $dev_name ];then
+		qnap_zpool create $zpool_name ${dev_name}
+    	fi
+}
+list_zpool(){
+	qnap_zpool list
+}
+list_zfs(){
+	qnap_zfs list
+}
+status_zpool(){
+	qnap_zpool status
+}
+destroy_zpool(){
+	qnap_zpool destroy $zpool_name
+}
+load_zfs_module(){
+    cdworking
+    if [ ! `basename $(pwd)` = 'qnap' ];then
+		echo 'Not inside qnap dir'
+		echo "Usage: Setup the qnap stuff."
+		return
+    fi    	
+sudo insmod linux_dependencies/opencrypto/ocf.ko && sudo insmod linux_dependencies/opencrypto/cryptosoft.ko && sudo insmod zfs/sys/cddl/compat/lpl/lpl.ko && sudo insmod zfs/zfs-module/zfs.ko
+
+	cd -
+}
+unload_zfs_module(){
+	sudo rmmod zfs  && sudo rmmod cryptosoft && sudo rmmod ocf && sudo rmmod lpl 
+}
+
 clean_qnap() {
     cdworking
     if [ ! `basename $(pwd)` = 'qnap' ];then
@@ -293,58 +347,11 @@ setup_qnap(){
     cd linux_dependencies ; make ; cd -
     	
 }
-#---------------------------------------------------
-	
-		#QNAP#	
 
+#---------------------------------------------------	
+		#TINTRI FS#	
 #---------------------------------------------------
-dev_name="/home/msys/devdir/d128M"
-zpool_name="qnappool"
-alias qnapclone="git clone git@192.168.102.80:root/qnap.git"
-alias qnap_zpool="sudo ${work_dir}/cddl/sbin/zpool/zpool"
-alias qnap_zfs="sudo ${work_dir}/cddl/sbin/zfs/zfs"
-alias qnap_zfilecopy="sudo ${work_dir}/cddl/usr.bin/zfilecopy/zfilecopy"
-alias zpool='sudo zpool'
-alias zfs='sudo zfs'
-mcreate_dev () {
-    	if [ ! -z "$dev_name" ];then
-		sudo rm -f ${dev_name} && sudo dd if=/dev/zero of=${dev_name} bs=1M count=128
-    	else
-	    echo "usage: mcreate_dev <devpath>"
-	fi
-}
-create_zpool(){
-    	#mcreate_dev
-	if [ -f $dev_name ];then
-		qnap_zpool create $zpool_name ${dev_name}
-    	fi
-}
-list_zpool(){
-	qnap_zpool list
-}
-list_zfs(){
-	qnap_zfs list
-}
-status_zpool(){
-	qnap_zpool status
-}
-destroy_zpool(){
-	qnap_zpool destroy $zpool_name
-}
-load_zfs_module(){
-    cdworking
-    if [ ! `basename $(pwd)` = 'qnap' ];then
-		echo 'Not inside qnap dir'
-		echo "Usage: Setup the qnap stuff."
-		return
-    fi    	
-sudo insmod linux_dependencies/opencrypto/ocf.ko && sudo insmod linux_dependencies/opencrypto/cryptosoft.ko && sudo insmod zfs/sys/cddl/compat/lpl/lpl.ko && sudo insmod zfs/zfs-module/zfs.ko
 
-	cd -
-}
-unload_zfs_module(){
-	sudo rmmod zfs  && sudo rmmod cryptosoft && sudo rmmod ocf && sudo rmmod lpl 
-}
 
 alias tintri_vm='ssh sghule@10.30.31.20'
 alias tintri_vpn_reset='sudo service systemd-resolved restart'

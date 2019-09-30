@@ -345,3 +345,10 @@ sudo insmod linux_dependencies/opencrypto/ocf.ko && sudo insmod linux_dependenci
 unload_zfs_module(){
 	sudo rmmod zfs  && sudo rmmod cryptosoft && sudo rmmod ocf && sudo rmmod lpl 
 }
+
+alias tintri_vm='ssh sghule@10.30.31.20'
+alias tintri_vpn_reset='sudo service systemd-resolved restart'
+alias vm_ip='sudo arp-scan -l | grep "CADMUS COMPUTER SYSTEMS" '
+alias tintri_vpn='~/myworkspace/docs/tintri-ddn/tintri-vpn'
+alias genmake='/home/ad.msystechnologies.com/somnath.ghule/private/genmake-master/genmake'
+

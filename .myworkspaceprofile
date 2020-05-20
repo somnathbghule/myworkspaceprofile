@@ -359,3 +359,5 @@ alias vm_ip='sudo arp-scan -l | grep "CADMUS COMPUTER SYSTEMS" '
 alias tintri_vpn='~/myworkspace/docs/tintri-ddn/tintri-vpn'
 alias genmake='/home/ad.msystechnologies.com/somnath.ghule/private/genmake-master/genmake'
 
+#
+export PATH=$PATH:/home/ad.msystechnologies.com/somnath.ghule/private/programming/go/go/bin
